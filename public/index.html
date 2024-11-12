@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatroom</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="chat-container">
+    <div class="username-container">
+      <input id="username-input" placeholder="Enter your username" />
+      <button id="start-chat">Start Chat</button>
+    </div>
+    <div class="chat-window" style="display:none;">
+      <ul id="messages"></ul>
+      <p id="typing-indicator" style="display:none;">Someone is typing...</p>
+      <form id="chat-form">
+        <input id="message-input" autocomplete="off" placeholder="Type a message..." />
+        <button>Send</button>
+      </form>
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let username = '';
+
+    document.getElementById('start-chat').addEventListener('click', () => {
+      username = document.getElementById('username-input').value;
+      if (username) {
+        socket.emit('set username', username);
+        document.querySelector('.username-container').style.display = 'none';
+        document.querySelector('.chat-window').style.display = 'block';
+      }
+    });
+
+    document.getElementById('chat-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const messageInput = document.getElementById('message-input');
+      const message = messageInput.value;
+      if (message) {
+        socket.emit('chat message', message);
+        messageInput.value = '';
+      }
+    });
+
+    document.getElementById('message-input').addEventListener('input', () => {
+      socket.emit('typing', document.getElementById('message-input').value.length > 0);
+    });
+
+    socket.on('chat message', (data) => {
+      const item = document.createElement('li');
+      item.innerHTML = `<strong>${data.username}:</strong> ${data.message}`;
+      item.classList.add('fade-in');
+      document.getElementById('messages').appendChild(item);
+    });
+
+    socket.on('typing', (data) => {
+      const typingIndicator = document.getElementById('typing-indicator');
+      if (data.isTyping) {
+        typingIndicator.textContent = `${data.username} is typing...`;
+        typingIndicator.style.display = 'block';
+      } else {
+        typingIndicator.style.display = 'none';
+      }
+    });
+
+    socket.on('user notification', (msg) => {
+      const item = document.createElement('li');
+      item.textContent = msg;
+      item.classList.add('notification');
+      document.getElementById('messages').appendChild(item);
+    });
+  </script>
+</body>
+</html>
